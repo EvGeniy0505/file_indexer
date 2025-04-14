@@ -8,6 +8,9 @@
 
 block_hash_t hash_block(const uint8_t* data, size_t size) 
 {
+    assert(data);
+    assert(size);
+
     uint8_t hash[BLAKE3_OUT_LEN] = {};
     blake3_hasher hasher = {};
     
@@ -28,6 +31,9 @@ int compare_hashes(const void* a, const void* b)
 
 block_hash_t* calculate_file_hashes(const char* filepath, size_t* hash_count)
 {
+    assert(filepath);
+    assert(hash_count);
+
     FILE* file = fopen(filepath, "rb");
 
     if (!file) 
@@ -36,7 +42,7 @@ block_hash_t* calculate_file_hashes(const char* filepath, size_t* hash_count)
         return 0;
     }
 
-    const size_t block_size = optimal_block_size(filepath);  // считаем хэш 1 МБ файла
+    const size_t block_size = optimal_block_size(filepath); 
 
     uint8_t* block = (uint8_t*) calloc(block_size, 1);
     assert(block);
@@ -44,13 +50,14 @@ block_hash_t* calculate_file_hashes(const char* filepath, size_t* hash_count)
     block_hash_t* all_hashes = NULL;
     size_t count = 0;
 
-    while (fread(block, 1, block_size, file) == block_size) 
+    while (fread(block, sizeof(char), block_size, file) == block_size) 
     {
         block_hash_t block_hash = hash_block(block, block_size);
         
-        block_hash_t* temp = (block_hash_t*)realloc(all_hashes, (count + 1) * sizeof(block_hash_t));
+        block_hash_t* temp_all_hashes = (block_hash_t*)realloc(all_hashes, 
+                                        (count + 1) * sizeof(block_hash_t));
 
-        if (!temp) // можно assert, но надо закрыть файл и очистить память
+        if (!temp_all_hashes) // можно assert, но надо закрыть файл и очистить память
         {
             free(all_hashes);
             free(block);
@@ -58,7 +65,7 @@ block_hash_t* calculate_file_hashes(const char* filepath, size_t* hash_count)
             return 0;
         }
 
-        all_hashes = temp;
+        all_hashes = temp_all_hashes;
         all_hashes[count++] = block_hash;
     }
 
@@ -69,11 +76,15 @@ block_hash_t* calculate_file_hashes(const char* filepath, size_t* hash_count)
     return all_hashes;
 }
 
-file_fingerprint_t min_hashes(const block_hash_t* all_hashes, size_t hash_count, size_t k, const char* filename) 
+file_fingerprint_t min_hashes(const block_hash_t* all_hashes, const size_t hash_count, 
+                              const size_t fingerprint_size, const char* filename) 
 {
+    assert(all_hashes);
+    assert(filename);
+
     file_fingerprint_t fp = {NULL, 0};
     
-    if (!all_hashes || hash_count == 0) 
+    if (hash_count == 0) 
     {
         return fp;
     }
@@ -87,16 +98,16 @@ file_fingerprint_t min_hashes(const block_hash_t* all_hashes, size_t hash_count,
 
     size_t selected = 0;    
 
-    if(k < hash_count) 
+    if(fingerprint_size < hash_count) 
     {
-        selected = k;
+        selected = fingerprint_size;
     } 
     else
     { 
         selected = hash_count;
     }
     
-    fp.min_hashes = (block_hash_t*)malloc(selected * sizeof(block_hash_t));
+    fp.min_hashes = (block_hash_t*) calloc(selected, sizeof(block_hash_t));
     if (!fp.min_hashes) 
     {
         free(sorted_hashes);
@@ -114,8 +125,10 @@ file_fingerprint_t min_hashes(const block_hash_t* all_hashes, size_t hash_count,
     return fp;
 }
 
-file_fingerprint_t build_fingerprint(const char* filepath, size_t k) 
+file_fingerprint_t build_fingerprint(const char* filepath, size_t fingerprint_size) 
 {
+    assert(filepath);
+
     size_t hash_count = 0;
 
     block_hash_t* all_hashes = calculate_file_hashes(filepath, &hash_count);
@@ -125,7 +138,7 @@ file_fingerprint_t build_fingerprint(const char* filepath, size_t k)
         return empty;
     }
 
-    file_fingerprint_t fp = min_hashes(all_hashes, hash_count, k, filepath);
+    file_fingerprint_t fp = min_hashes(all_hashes, hash_count, fingerprint_size, filepath);
     
     free(all_hashes);
 
@@ -134,7 +147,9 @@ file_fingerprint_t build_fingerprint(const char* filepath, size_t k)
 
 size_t optimal_block_size(const char* filename) 
 {
-    struct stat st;
+    assert(filename);
+
+    struct stat st = {};
 
     stat(filename, &st);
     size_t file_size = st.st_size;
@@ -144,5 +159,5 @@ size_t optimal_block_size(const char* filename)
     else if (file_size < 100 * 1024 * 1024) 
         return 12 * 1024;               
     else 
-        return 1024 * 1024;     
+        return 1024 * 1024;   
 }

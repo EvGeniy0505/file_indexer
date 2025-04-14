@@ -5,9 +5,12 @@
 
 #include "file_index.h"
 
-void index_add_file(file_index_t* index, const char* filepath, size_t k) 
+void index_add_file(file_index_t* index, const char* filepath, size_t fingerprint_size) 
 {
-    file_fingerprint_t fp = build_fingerprint(filepath, k);
+    assert(index);
+    assert(filepath);
+
+    file_fingerprint_t fp = build_fingerprint(filepath, fingerprint_size);
 
     index->fingerprints = (file_fingerprint_t*)realloc(index->fingerprints, 
                           (index->file_count + 1) * sizeof(file_fingerprint_t));
@@ -16,8 +19,15 @@ void index_add_file(file_index_t* index, const char* filepath, size_t k)
     index->fingerprints[index->file_count++] = fp;
 }
 
+file_index_t index_ctor()
+{
+    return (file_index_t) {NULL, 0}; 
+}
+
 void index_dtor(file_index_t* index) 
 {
+    assert(index);
+
     for (size_t i = 0; i < index->file_count; i++) 
     {
         free(index->fingerprints[i].min_hashes);
@@ -29,6 +39,9 @@ void index_dtor(file_index_t* index)
 
 float calculate_jaccard_similarity(const file_fingerprint_t* a, const file_fingerprint_t* b) 
 {
+    assert(a);
+    assert(b);
+
     size_t common = 0, i = 0, j = 0;
 
     while (i < a->count && j < b->count) 
@@ -51,9 +64,12 @@ float calculate_jaccard_similarity(const file_fingerprint_t* a, const file_finge
     return total ? (float)common / (float)total : 0;
 }
 
-void find_similar(const file_index_t* index, const char* query_file, float threshold, size_t k) 
+void find_similar(const file_index_t* index, const char* query_file, float threshold, size_t fingerprint_size) 
 {
-    file_fingerprint_t query = build_fingerprint(query_file, k);
+    assert(index);
+    assert(query_file);
+
+    file_fingerprint_t query = build_fingerprint(query_file, fingerprint_size);
 
     printf("Похожие на '%s' с порогом %.2f:\n", query_file, threshold);
 

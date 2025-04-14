@@ -1,20 +1,35 @@
-#ifndef FILE_INDEX
-#define FILE_INDEX
+#ifndef FILE_INDEX_H
+#define FILE_INDEX_H
 
 #include "hasher.h"
 
+/**
+ * @brief Структура для хранения отпечатков файлов
+ */
+typedef struct 
+{
+    file_fingerprint_t* fingerprints;
+    size_t file_count;
+} file_index_t;
 
 /**
- * @brief Добавляет файл в индекс
+ * @brief Добавляет файл в структуру индексов
  * 
  * @param index Указатель на структуру индекса
  * @param filepath Путь к файлу для индексации
- * @param k Количество минимальных хешей для сохранения в отпечатке
+ * @param fingerprint_size Количество минимальных хешей для сохранения в отпечатке
  * 
  * @note Функция вычисляет MinHash-отпечаток файла и сохраняет его в индекс.
- * Значение k - от 64 до 256 для баланса точности. 
+ * Значение fingerprint_size - от 64 до 256 для баланса точности. 
  */
-void index_add_file(file_index_t* index, const char* filepath, size_t k);
+void index_add_file(file_index_t* index, const char* filepath, size_t fingerprint_size);
+
+/**
+ * @brief Освобождает ресурсы, занятые индексом
+ * 
+ * @return file_index_t Струтура для хранения отпечатков файлов
+ */
+file_index_t index_ctor();
 
 /**
  * @brief Освобождает ресурсы, занятые индексом
@@ -46,7 +61,7 @@ float calculate_jaccard_similarity(const file_fingerprint_t* a, const file_finge
  * @param index Указатель на индекс для поиска
  * @param query_file Путь к файлу-запросу
  * @param threshold Порог сходства (от 0.0 до 1.0)
- * @param k Количество хешей для отпечатка файла-запроса
+ * @param fingerprint_size Количество хешей для отпечатка файла-запроса
  * 
  * @note Функция выводит на экран список файлов из индекса, чей коэффициент
  * Жаккара с файлом-запросом >= threshold.
@@ -56,6 +71,7 @@ float calculate_jaccard_similarity(const file_fingerprint_t* a, const file_finge
  * find_similar(&index, "file.bin", 0.8f, 64); // Найти файлы сходные на 80%+
  * @endcode
  */
-void find_similar(const file_index_t* index, const char* query_file, float threshold, size_t k);
+void find_similar(const file_index_t* index, const char* query_file, 
+                  float threshold, size_t fingerprint_size);
 
-#endif
+#endif  // FILE_INDEX_H
